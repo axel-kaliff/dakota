@@ -158,7 +158,7 @@ jobs:
 
       - name: Build OCI image with BuildStream
         env:
-          BST_FLAGS: --no-interactive --config /src/buildstream-ci.conf
+          BST_FLAGS: -o x86_64_v3 true --no-interactive --config /src/buildstream-ci.conf
         run: |
           just bst build oci/bluefin.bst
         timeout-minutes: 120
@@ -173,7 +173,7 @@ jobs:
       - name: Export OCI image from BuildStream
         id: export
         env:
-          BST_FLAGS: --no-interactive --config /src/buildstream-ci.conf
+          BST_FLAGS: -o x86_64_v3 true --no-interactive --config /src/buildstream-ci.conf
           BUILD_IMAGE_NAME: ${{ env.IMAGE_NAME }}
           OCI_IMAGE_CREATED: ${{ steps.timestamp.outputs.created }}
           OCI_IMAGE_REVISION: ${{ github.sha }}
