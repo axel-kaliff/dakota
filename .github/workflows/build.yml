@@ -22,22 +22,20 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     permissions:
-      # FIXME: Make the build with JWT work
-      # id-token: write
+      id-token: write
       contents: read
       packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      # FIXME: Make the build with JWT work
-      # - name: Get JWT token
-      #   uses: actions/github-script@v7
-      #   with:
-      #     script: |
-      #       const fs = require('fs');
-      #       const token = await core.getIDToken('cache.projectbluefin.io')
-      #       fs.writeFileSync('bluefin.token', token, { mode: 0o600 });
+      - name: Get JWT token
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const token = await core.getIDToken('cache.projectbluefin.io')
+            fs.writeFileSync('bluefin.token', token, { mode: 0o644 });
 
       - name: Setup Just
         uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
@@ -56,15 +54,10 @@ jobs:
       # - cache-buildtrees: never -> save disk (we only need final artifacts)
       #
       - name: Generate BuildStream CI config
-        env:
-          CASD_CLIENT_CERT: ${{ vars.CASD_CLIENT_CERT }}
-          CASD_CLIENT_KEY: ${{ secrets.CASD_CLIENT_KEY }}
         run: |
           mkdir -p logs
 
           # Setup certificate for pushing to the cache
-          echo "$CASD_CLIENT_CERT" > client.crt
-          echo "$CASD_CLIENT_KEY" > client.key
           cat > buildstream-ci.conf <<'BSTCONF'
           scheduler:
             on-error: continue
@@ -84,11 +77,12 @@ jobs:
 
           BSTCONF
 
-          if [[ -n "$CASD_CLIENT_CERT" ]] && [[ -n "$CASD_CLIENT_ΚΕΥ" ]]; then
+          # FIXME: handle token not existing, like on forks
+          if true; then
             cat >> buildstream-ci.conf <<'BSTCONFPUSH'
           artifacts:
             servers:
-            - url: https://cache.projectbluefin.io:11002
+            - url: https://cache.projectbluefin.io:11004
               push: true
               connection-config:
                 keepalive-time: 60
@@ -96,12 +90,11 @@ jobs:
                 retry-delay: 1000
                 request-timeout: 180
               auth:
-                client-key: /src/client.key
-                client-cert: /src/client.crt
+                access-token: /src/bluefin.token
 
           source-caches:
             servers:
-            - url: https://cache.projectbluefin.io:11002
+            - url: https://cache.projectbluefin.io:11004
               push: true
               connection-config:
                 keepalive-time: 60
@@ -109,42 +102,38 @@ jobs:
                 retry-delay: 1000
                 request-timeout: 180
               auth:
-                client-key: /src/client.key
-                client-cert: /src/client.crt
+                access-token: /src/bluefin.token
 
           cache:
             storage-service:
-              url: https://cache.projectbluefin.io:11002
+              url: https://cache.projectbluefin.io:11004
               connection-config:
                 keepalive-time: 60
                 retry-limit: 5
                 retry-delay: 1000
                 request-timeout: 180
               auth:
-                client-key: /src/client.key
-                client-cert: /src/client.crt
+                access-token: /src/bluefin.token
 
           remote-execution:
             execution-service:
-              url: https://cache.projectbluefin.io:11002
+              url: https://cache.projectbluefin.io:11004
               connection-config:
                 keepalive-time: 60
                 retry-limit: 5
                 retry-delay: 1000
                 request-timeout: 180
               auth:
-                client-key: /src/client.key
-                client-cert: /src/client.crt
+                access-token: /src/bluefin.token
             action-cache-service:
-              url: https://cache.projectbluefin.io:11002
+              url: https://cache.projectbluefin.io:11004
               connection-config:
                 keepalive-time: 60
                 retry-limit: 5
                 retry-delay: 1000
                 request-timeout: 180
               auth:
-                client-key: /src/client.key
-                client-cert: /src/client.crt
+                access-token: /src/bluefin.token
           BSTCONFPUSH
           fi
 
@@ -192,10 +181,9 @@ jobs:
            just lint
 
       # Delete jwt token just in case
-      # FIXME: Make the build with JWT work
-      # - name: Delete token
-      #   if: always()
-      #   run: rm -f bluefin.token
+      - name: Delete token
+        if: always()
+        run: rm -f bluefin.token
 
       # ── Upload build logs ─────────────────────────────────────────────
       # Always upload, even on failure, so build failures can be diagnosed.
