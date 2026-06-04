@@ -356,8 +356,12 @@ report:
 
     if ! gh auth status --active &>/dev/null; then
         echo ""
-        gum style --foreground 214 --bold --margin "0 2" \
-            "gh is not signed in — no problem, here are your options:"
+        if command -v gh &>/dev/null; then
+            GH_HEADLINE="gh is not signed in — no problem, here are your options:"
+        else
+            GH_HEADLINE="gh is not installed — no problem, here are your options:"
+        fi
+        gum style --foreground 214 --bold --margin "0 2" "$GH_HEADLINE"
         echo ""
         gum style --margin "0 2" "Option 1 — copy to clipboard and paste into an issue:"
         if command -v wl-copy &>/dev/null; then
@@ -371,7 +375,12 @@ report:
         fi
         gum style --foreground 245 --margin "0 4" "Open: $ISSUE_URL_BASE"
         echo ""
-        gum style --margin "0 2" "Option 2 — sign in to gh and upload:"
+        if command -v gh &>/dev/null; then
+            gum style --margin "0 2" "Option 2 — sign in to gh and upload:"
+        else
+            gum style --margin "0 2" "Option 2 — install gh and upload:"
+            gum style --foreground 245 --margin "0 4" "brew install gh"
+        fi
         gum style --foreground 245 --margin "0 4" "gh auth login"
         gum style --foreground 245 --margin "0 4" "gh gist create --public --desc 'Bluefin diagnostic report' $REPORT_DIR/summary.md"
         echo ""
@@ -543,7 +552,11 @@ confirm issue_number:
         fi
         echo "  https://github.com/${REPO}/issues/${ISSUE}"
         echo ""
-        echo "Or authenticate gh first: gh auth login"
+        if command -v gh &>/dev/null; then
+            echo "Or authenticate gh first: gh auth login"
+        else
+            echo "Or install gh first: brew install gh && gh auth login"
+        fi
     fi
 
 # Verify that a fix works on your hardware after upgrading.
@@ -658,7 +671,11 @@ verify issue_number:
         fi
         echo "  https://github.com/${REPO}/issues/${ISSUE}"
         echo ""
-        echo "Or authenticate gh first: gh auth login"
+        if command -v gh &>/dev/null; then
+            echo "Or authenticate gh first: gh auth login"
+        else
+            echo "Or install gh first: brew install gh && gh auth login"
+        fi
     fi
 
 # Start an AI-assisted debug session backed by your live system.
